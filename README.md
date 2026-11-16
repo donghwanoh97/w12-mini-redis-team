@@ -2,6 +2,8 @@
 
 HTTP로 명령을 주고받는 작은 Redis예요. 이 문서를 읽으면 mini-Redis 서버를 켜고, 같은 Wi-Fi의 다른 PC에서 `curl`로 `SET`/`GET` 같은 명령을 보낼 수 있어요. 서버를 여는 사람은 1번, 접속하는 사람은 2번부터 읽어요.
 
+📊 [팀 스프레드시트](https://docs.google.com/spreadsheets/d/17CQ6UBq5Ho2LWllgFnT6q9Qj7cRPsojm0ODdX4UTb_8/edit?gid=728258001#gid=728258001)
+
 ## 1. 서버 여는 사람
 
 ### Python 설치
