@@ -139,6 +139,27 @@ curl http://<서버 IP>:6380/health
 - `SET`(TTL 없이), `GETSET`, `SETXX`, `MSET`으로 값을 덮어쓰면 TTL이 지워져요. `INCR`·`DECR`은 TTL을 유지해요.
 - 만료된 key는 다음에 조회될 때 지워져요. 그래서 아무도 조회하지 않은 만료 key는 `DBSIZE`에 잠시 포함될 수 있어요.
 
+### 목록 조회
+
+prefix로 시작하는 key를 한 번에 가져와요. key 이름을 몰라도 돼서, `msg:1`, `msg:2`처럼 같은 prefix로 저장한 데이터를 모아 볼 때 써요. (실제 Redis에는 없는 명령어예요)
+
+| 명령어 | args | 결과 |
+| --- | --- | --- |
+| `SCANPREFIX` | `["prefix"]` | `[{"key", "value", "ttl"}, ...]`. 맞는 key가 없으면 `[]` |
+
+- `ttl`은 `TTL` 명령어와 같은 규칙이에요. 남은 시간(초, 올림)이고, 만료가 없으면 `-1`이에요.
+- 만료된 key는 결과에 넣지 않고, 훑는 김에 지워요. 그래서 `SCANPREFIX` 뒤에는 `DBSIZE`가 줄어들 수 있어요.
+- prefix는 대소문자를 구분해요. 빈 문자열 `""`을 주면 모든 key를 돌려줘요.
+- 해시 테이블 버킷을 처음부터 끝까지 훑어서 **순서는 정해져 있지 않아요.** 필요하면 받은 쪽에서 정렬해요.
+- 버킷 전체를 훑어서 저장된 key가 많을수록 느려져요. (버킷 수에 비례)
+
+```bash
+curl -X POST http://<서버 IP>:6380/command -d '{"command": "SET", "args": ["msg:1", "hello", "1800"]}'
+curl -X POST http://<서버 IP>:6380/command -d '{"command": "SET", "args": ["msg:2", "world"]}'
+curl -X POST http://<서버 IP>:6380/command -d '{"command": "SCANPREFIX", "args": ["msg:"]}'
+# {"ok": true, "result": [{"key": "msg:1", "value": "hello", "ttl": 1800}, {"key": "msg:2", "value": "world", "ttl": -1}], "error": null}
+```
+
 ### 디버깅 명령어
 
 해시 테이블 상태를 확인하거나 테스트 중에 저장소를 비울 때 써요.

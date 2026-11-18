@@ -44,3 +44,15 @@ def test_cmd03_error_then_continue_then_exit():
 
 def test_cmd06_format_list_result_with_numbers():
     assert format_result(["1", None]) == '1) "1"\n2) (nil)'
+
+
+def test_scp14_cli_formats_scanprefix_items():
+    result = [{"key": "msg:1", "value": "a", "ttl": 30}, {"key": "msg:2", "value": "b", "ttl": -1}]
+    assert format_result(result) == (
+        "1) key: msg:1\n   value: a\n   ttl: 30\n"
+        "2) key: msg:2\n   value: b\n   ttl: -1"
+    )
+
+
+def test_scp15_cli_formats_empty_list():
+    assert format_result([]) == "(empty array)"

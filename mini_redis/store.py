@@ -311,3 +311,21 @@ class HashTable:
         if expire_at is None:
             return -1
         return math.ceil(expire_at - now)
+
+    def scan_prefix(self, prefix):
+        """prefix로 시작하는 살아 있는 key를 {"key", "value", "ttl"} 목록으로 돌려줘요.
+        ttl은 TTL 명령어와 같은 규칙이에요(남은 초 올림, 만료 없음 -1).
+        버킷을 처음부터 끝까지 훑어서 순서는 정해져 있지 않아요.
+        지나가며 만난 만료 key는 _probe처럼 TOMBSTONE으로 정리해요. (지연 만료)"""
+        now = self.clock()
+        result = []
+        for b in self.buckets:
+            if b.state != State.OCCUPIED:
+                continue
+            if b.is_expired(now):
+                self._remove(b)
+                continue
+            if b.key.startswith(prefix):
+                ttl = -1 if b.expire_at is None else math.ceil(b.expire_at - now)
+                result.append({"key": b.key, "value": b.value, "ttl": ttl})
+        return result

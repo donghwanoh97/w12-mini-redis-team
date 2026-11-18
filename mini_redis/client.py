@@ -138,3 +138,7 @@ class MiniRedis:
 
     def mget(self, *keys):
         return self.execute("MGET", *keys)
+
+    def scanprefix(self, prefix):
+        """prefix로 시작하는 살아 있는 key를 [{"key", "value", "ttl"}, ...]로 돌려줘요."""
+        return self.execute("SCANPREFIX", prefix)
