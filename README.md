@@ -91,7 +91,22 @@ curl -m 5 http://<서버 IP>:6380/health
 
 `ping`은 확인용으로 쓰지 않아요. Windows는 방화벽이 기본으로 ping을 막아서, 서버 연결이 되는데도 ping은 실패할 수 있어요.
 
-## 4. CLI로 쓰기
+## 4. curl로 쓰기 (HTTP)
+
+설치 없이 `curl`만 있으면 써요. `POST /command`에 명령어 이름과 인자를 JSON으로 보내요.
+
+```bash
+curl -X POST http://<서버 IP>:6380/command -d '{"command": "SET", "args": ["hello", "world"]}'
+# {"ok": true, "result": "OK", "error": null}
+
+curl -X POST http://<서버 IP>:6380/command -d '{"command": "GET", "args": ["hello"]}'
+# {"ok": true, "result": "world", "error": null}
+```
+
+- 응답은 항상 `{ok, result, error}` 형식이에요. 실패하면 `ok`가 `false`이고 `error`에 이유가 담겨요.
+- 사용할 수 있는 명령어는 [6. 명령어](#6-명령어), 더 많은 예시는 [7. 사용 예시](#7-사용-예시)를 봐요.
+
+## 5. CLI로 쓰기
 
 curl 대신 짧은 명령어로 쓸 수 있어요. 이 저장소 폴더 안에서 실행해요. 다른 폴더에서 실행하면 `No module named 'mini_redis'` 오류가 나요. CLI는 쓰는 동안만 실행하면 되지만, 접속할 **서버는 켜져 있어야 해요**.
 
@@ -125,7 +140,7 @@ mini-redis> exit
 - 공백이 들어간 값은 따옴표로 감싸요.
 - 오류가 나도 CLI는 끝나지 않아요. `exit`, `quit`, Ctrl+C, Ctrl+D로 끝내요.
 
-## 5. 명령어
+## 6. 명령어
 
 요청 형식은 항상 같아요. 명령어 이름과 인자를 **따로** 넣어요.
 
@@ -232,7 +247,7 @@ curl -X POST http://<서버 IP>:6380/command -d '{"command": "SCANPREFIX", "args
 | `NOT_FOUND` | 404 | `/command`, `/health`가 아닌 경로일 때 |
 | `STORE_FULL` | 507 | 저장소가 최대 크기에 도달해, 만료 key와 삭제 표시를 정리해도 더 저장할 수 없을 때 |
 
-## 6. 사용 예시
+## 7. 사용 예시
 
 ```bash
 curl -X POST http://<서버 IP>:6380/command -d '{"command": "SET", "args": ["hello", "world"]}'
@@ -290,7 +305,7 @@ curl -X POST http://<서버 IP>:6380/command -d '{"command": "FLUSH", "args": []
 
 macOS 터미널에서 응답 끝에 붙는 `%`는 줄바꿈이 없다는 표시예요. 응답의 일부가 아니에요.
 
-## 7. Python 코드에서 쓰기
+## 8. Python 코드에서 쓰기
 
 웹 서버 같은 Python 코드에서 쓸 때는 클라이언트를 `import`해요. 표준 라이브러리만 써서 따로 설치할 패키지가 없어요.
 
