@@ -1,6 +1,15 @@
 # mini-Redis
 
-HTTP로 명령을 주고받는 작은 Redis예요. 이 문서를 읽으면 mini-Redis 서버를 켜고, 같은 Wi-Fi의 다른 PC에서 `curl`로 `SET`/`GET` 같은 명령을 보낼 수 있어요. 서버를 여는 사람은 1번, 접속하는 사람은 2번부터 읽어요.
+데이터를 디스크가 아닌 **메모리**에 두고, 여러 클라이언트가 네트워크로 접속해 함께 쓰는 **key-value 저장소 서버**예요. Redis처럼 서버 하나를 켜 두면 여러 PC가 HTTP로 `SET`/`GET`/`INCR`/`MSET` 같은 명령을 보내 같은 데이터를 읽고 쓸 수 있고, 만료 시간(TTL)도 지원해요.
+
+| 구분 | 사용 기술 |
+| --- | --- |
+| 언어 | Python 3 (표준 라이브러리만 사용) |
+| 통신 | HTTP + JSON (`http.server`) |
+| 저장소 | 직접 구현한 해시 테이블 (메모리, 서버를 끄면 데이터가 사라져요) |
+| 클라이언트 | `curl`, CLI(`mini_redis.cli`), Python 클라이언트(`mini_redis.client`) |
+
+이 문서를 읽으면 mini-Redis 서버를 켜고, 같은 Wi-Fi의 다른 PC에서 `curl`로 `SET`/`GET` 같은 명령을 보낼 수 있어요. 서버를 여는 사람은 1번, 접속하는 사람은 2번부터 읽어요.
 
 📊 [팀 스프레드시트](https://docs.google.com/spreadsheets/d/17CQ6UBq5Ho2LWllgFnT6q9Qj7cRPsojm0ODdX4UTb_8/edit?gid=728258001#gid=728258001)
 
@@ -56,10 +65,13 @@ python -m mini_redis --host 0.0.0.0   # 다른 PC 접속 허용, Ctrl+C로 종�
 - 명령은 `curl`로 `POST /command`에 JSON을 보내요.
   - Windows PowerShell 5.1에서는 `curl`이 `Invoke-WebRequest`의 별칭이라 요청이 실패할 수 있어요. `curl` 대신 `curl.exe`로 입력해요.
 
-## 3. 연결 확인
+## 3. 헬스체크
+
+서버가 살아 있는지 확인해요.
 
 ```bash
 curl -m 5 http://<서버 IP>:6380/health
+# {"ok": true, "result": "PONG", "error": null}
 ```
 
 응답이 오지 않고 `Connection timed out`이 나면 아래를 순서대로 확인해요.
@@ -79,14 +91,39 @@ curl -m 5 http://<서버 IP>:6380/health
 
 `ping`은 확인용으로 쓰지 않아요. Windows는 방화벽이 기본으로 ping을 막아서, 서버 연결이 되는데도 ping은 실패할 수 있어요.
 
-## 4. 헬스체크
+## 4. CLI로 쓰기
 
-서버가 살아 있는지 확인해요.
+curl 대신 짧은 명령어로 쓸 수 있어요. 이 저장소 폴더 안에서 실행해요. 다른 폴더에서 실행하면 `No module named 'mini_redis'` 오류가 나요. CLI는 쓰는 동안만 실행하면 되지만, 접속할 **서버는 켜져 있어야 해요**.
 
 ```bash
-curl http://<서버 IP>:6380/health
-# {"ok": true, "result": "PONG", "error": null}
+python -m mini_redis.cli --host <서버 IP>     # --port를 빼면 6380
 ```
+
+- CLI의 `--host`는 **접속할 서버의 IP**예요. 이 명령어로 내 서버가 다른 사람에게 열리지는 않아요.
+- 다른 사람이 내 서버를 쓰게 하려면 서버를 `python -m mini_redis --host 0.0.0.0`으로 켜요. ([1. 서버 여는 사람](#1-서버-여는-사람) 참고)
+- 내 PC에서 혼자 쓸 때는 한 터미널에서 `python -m mini_redis`로 서버를 켜고, 다른 터미널에서 `--host` 없이 `python -m mini_redis.cli`를 실행해요.
+- ↑↓ 키로 이전에 입력한 명령어를 다시 불러올 수 있어요. (Windows는 지원하지 않아요)
+
+```
+mini-redis> SET msg "hello world"
+"OK"
+mini-redis> GET msg
+"hello world"
+mini-redis> GET nothing
+(nil)
+mini-redis> EXISTS msg
+(integer) 1
+mini-redis> SET session abc 30
+"OK"
+mini-redis> TTL session
+(integer) 30
+mini-redis> GET
+(error) WRONG_ARGS GET은 인자 1개가 필요해요
+mini-redis> exit
+```
+
+- 공백이 들어간 값은 따옴표로 감싸요.
+- 오류가 나도 CLI는 끝나지 않아요. `exit`, `quit`, Ctrl+C, Ctrl+D로 끝내요.
 
 ## 5. 명령어
 
@@ -253,41 +290,7 @@ curl -X POST http://<서버 IP>:6380/command -d '{"command": "FLUSH", "args": []
 
 macOS 터미널에서 응답 끝에 붙는 `%`는 줄바꿈이 없다는 표시예요. 응답의 일부가 아니에요.
 
-## 7. CLI로 쓰기
-
-curl 대신 짧은 명령어로 쓸 수 있어요. 이 저장소 폴더 안에서 실행해요. 다른 폴더에서 실행하면 `No module named 'mini_redis'` 오류가 나요. CLI는 쓰는 동안만 실행하면 되지만, 접속할 **서버는 켜져 있어야 해요**.
-
-```bash
-python -m mini_redis.cli --host <서버 IP>     # --port를 빼면 6380
-```
-
-- CLI의 `--host`는 **접속할 서버의 IP**예요. 이 명령어로 내 서버가 다른 사람에게 열리지는 않아요.
-- 다른 사람이 내 서버를 쓰게 하려면 서버를 `python -m mini_redis --host 0.0.0.0`으로 켜요. ([1. 서버 여는 사람](#1-서버-여는-사람) 참고)
-- 내 PC에서 혼자 쓸 때는 한 터미널에서 `python -m mini_redis`로 서버를 켜고, 다른 터미널에서 `--host` 없이 `python -m mini_redis.cli`를 실행해요.
-- ↑↓ 키로 이전에 입력한 명령어를 다시 불러올 수 있어요. (Windows는 지원하지 않아요)
-
-```
-mini-redis> SET msg "hello world"
-"OK"
-mini-redis> GET msg
-"hello world"
-mini-redis> GET nothing
-(nil)
-mini-redis> EXISTS msg
-(integer) 1
-mini-redis> SET session abc 30
-"OK"
-mini-redis> TTL session
-(integer) 30
-mini-redis> GET
-(error) WRONG_ARGS GET은 인자 1개가 필요해요
-mini-redis> exit
-```
-
-- 공백이 들어간 값은 따옴표로 감싸요.
-- 오류가 나도 CLI는 끝나지 않아요. `exit`, `quit`, Ctrl+C, Ctrl+D로 끝내요.
-
-## 8. Python 코드에서 쓰기
+## 7. Python 코드에서 쓰기
 
 웹 서버 같은 Python 코드에서 쓸 때는 클라이언트를 `import`해요. 표준 라이브러리만 써서 따로 설치할 패키지가 없어요.
 
