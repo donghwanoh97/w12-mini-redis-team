@@ -104,7 +104,22 @@ curl -X POST http://<서버 IP>:6380/command -d '{"command": "GET", "args": ["he
 ```
 
 - 응답은 항상 `{ok, result, error}` 형식이에요. 실패하면 `ok`가 `false`이고 `error`에 이유가 담겨요.
-- 사용할 수 있는 명령어는 [6. 명령어](#6-명령어), 더 많은 예시는 [7. 사용 예시](#7-사용-예시)를 봐요.
+- 사용할 수 있는 명령어는 [6. 명령어](#6-명령어)를 봐요.
+
+자주 하는 실수예요.
+
+```bash
+# ✗ 명령어와 인자를 한 문자열에 넣음 → UNKNOWN_COMMAND
+-d '{"command": "SET hello world", "args": []}'
+
+# ✗ 따옴표가 둥근 따옴표(“ ”)로 바뀜 → INVALID_REQUEST
+#   Slack이나 메모 앱에서 복사하면 자주 바뀌어요. 코드 블록으로 공유해요.
+
+# ✓ 이렇게 보내요
+-d '{"command": "SET", "args": ["hello", "world"]}'
+```
+
+macOS 터미널에서 응답 끝에 붙는 `%`는 줄바꿈이 없다는 표시예요. 응답의 일부가 아니에요.
 
 ## 5. CLI로 쓰기
 
@@ -247,65 +262,7 @@ curl -X POST http://<서버 IP>:6380/command -d '{"command": "SCANPREFIX", "args
 | `NOT_FOUND` | 404 | `/command`, `/health`가 아닌 경로일 때 |
 | `STORE_FULL` | 507 | 저장소가 최대 크기에 도달해, 만료 key와 삭제 표시를 정리해도 더 저장할 수 없을 때 |
 
-## 7. 사용 예시
-
-```bash
-curl -X POST http://<서버 IP>:6380/command -d '{"command": "SET", "args": ["hello", "world"]}'
-# {"ok": true, "result": "OK", "error": null}
-
-curl -X POST http://<서버 IP>:6380/command -d '{"command": "GET", "args": ["hello"]}'
-# {"ok": true, "result": "world", "error": null}
-
-curl -X POST http://<서버 IP>:6380/command -d '{"command": "EXISTS", "args": ["hello"]}'
-# {"ok": true, "result": 1, "error": null}
-
-curl -X POST http://<서버 IP>:6380/command -d '{"command": "DEL", "args": ["hello"]}'
-# {"ok": true, "result": 1, "error": null}
-
-curl -X POST http://<서버 IP>:6380/command -d '{"command": "DBSIZE", "args": []}'
-# {"ok": true, "result": 0, "error": null}
-
-# 원자적 명령어
-curl -X POST http://<서버 IP>:6380/command -d '{"command": "INCR", "args": ["views"]}'
-# {"ok": true, "result": 1, "error": null}   ← views가 없어서 0 + 1
-
-curl -X POST http://<서버 IP>:6380/command -d '{"command": "MSET", "args": ["a", "1", "b", "2"]}'
-# {"ok": true, "result": "OK", "error": null}
-
-curl -X POST http://<서버 IP>:6380/command -d '{"command": "MGET", "args": ["a", "b", "c"]}'
-# {"ok": true, "result": ["1", "2", null], "error": null}
-
-# 만료(TTL)
-curl -X POST http://<서버 IP>:6380/command -d '{"command": "SET", "args": ["session", "abc", "30"]}'
-# {"ok": true, "result": "OK", "error": null}   ← 30초 뒤 만료
-
-curl -X POST http://<서버 IP>:6380/command -d '{"command": "TTL", "args": ["session"]}'
-# {"ok": true, "result": 30, "error": null}
-
-# 디버깅 명령어
-curl -X POST http://<서버 IP>:6380/command -d '{"command": "INFO", "args": []}'
-# {"ok": true, "result": {"size": 0, "capacity": 8, "tombstones": 1}, "error": null}
-
-curl -X POST http://<서버 IP>:6380/command -d '{"command": "FLUSH", "args": []}'
-# {"ok": true, "result": 0, "error": null}   ← 지운 key 개수. 버킷 수와 tombstone도 처음으로 돌아가요
-```
-
-자주 하는 실수예요.
-
-```bash
-# ✗ 명령어와 인자를 한 문자열에 넣음 → UNKNOWN_COMMAND
--d '{"command": "SET hello world", "args": []}'
-
-# ✗ 따옴표가 둥근 따옴표(“ ”)로 바뀜 → INVALID_REQUEST
-#   Slack이나 메모 앱에서 복사하면 자주 바뀌어요. 코드 블록으로 공유해요.
-
-# ✓ 이렇게 보내요
--d '{"command": "SET", "args": ["hello", "world"]}'
-```
-
-macOS 터미널에서 응답 끝에 붙는 `%`는 줄바꿈이 없다는 표시예요. 응답의 일부가 아니에요.
-
-## 8. Python 코드에서 쓰기
+## 7. Python 코드에서 쓰기
 
 웹 서버 같은 Python 코드에서 쓸 때는 클라이언트를 `import`해요. 표준 라이브러리만 써서 따로 설치할 패키지가 없어요.
 
