@@ -1,6 +1,15 @@
 # mini-Redis
 
-HTTP로 명령을 주고받는 작은 Redis예요. 이 문서를 읽으면 mini-Redis 서버를 켜고, 같은 Wi-Fi의 다른 PC에서 `curl`로 `SET`/`GET` 같은 명령을 보낼 수 있어요. 서버를 여는 사람은 1번, 접속하는 사람은 2번부터 읽어요.
+HTTP로 명령을 주고받는 작은 Redis예요. key-value를 메모리에 저장하고, `SET`/`GET`/`INCR`/`MSET` 같은 명령과 만료(TTL)를 지원해요.
+
+| 구분 | 사용 기술 |
+| --- | --- |
+| 언어 | Python 3 (표준 라이브러리만 사용) |
+| 통신 | HTTP + JSON (`http.server`) |
+| 저장소 | 직접 구현한 해시 테이블 (메모리, 서버를 끄면 데이터가 사라져요) |
+| 클라이언트 | `curl`, CLI(`mini_redis.cli`), Python 클라이언트(`mini_redis.client`) |
+
+이 문서를 읽으면 mini-Redis 서버를 켜고, 같은 Wi-Fi의 다른 PC에서 `curl`로 `SET`/`GET` 같은 명령을 보낼 수 있어요. 서버를 여는 사람은 1번, 접속하는 사람은 2번부터 읽어요.
 
 📊 [팀 스프레드시트](https://docs.google.com/spreadsheets/d/17CQ6UBq5Ho2LWllgFnT6q9Qj7cRPsojm0ODdX4UTb_8/edit?gid=728258001#gid=728258001)
 
