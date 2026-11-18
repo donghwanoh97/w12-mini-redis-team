@@ -42,3 +42,13 @@ def test_clt08_mset_takes_dict_and_mget_returns_list(client):
 def test_clt09_set_with_ttl_and_ttl(client):
     assert client.set("k", "v", ttl=30) == "OK"     # 30을 "30"으로 보내요
     assert client.ttl("k") == 30                    # 남은 시간을 올림해서 1초 안에는 30이에요
+
+
+def test_scp13_client_scanprefix(client):
+    client.set("msg:1", "a", 1800)
+    client.set("likes:1", "0")
+    result = client.scanprefix("msg:")
+    assert len(result) == 1
+    assert result[0]["key"] == "msg:1"
+    assert result[0]["value"] == "a"
+    assert 1 <= result[0]["ttl"] <= 1800

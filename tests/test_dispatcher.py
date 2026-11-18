@@ -538,3 +538,84 @@ def test_reg04_flush_keeps_clock(clock):
     run("SET", "key1", "val1", "10")
     clock.now = 10                               # 실제 시계로 바뀌었다면 값이 남아요
     assert run("GET", "key1") is None
+
+
+# ---------------------------------------------------------------------------
+# SCANPREFIX. 케이스 ID는 docs/test-cases/scanprefix/test-cases.md를 따라요.
+# 순서는 정해져 있지 않아서 key로 정렬해 비교해요.
+# ---------------------------------------------------------------------------
+
+def scan(prefix):
+    return sorted(run("SCANPREFIX", prefix), key=lambda item: item["key"])
+
+
+def test_scp01_returns_only_matching_prefix(clock):
+    run("SET", "msg:1", "a")
+    run("SET", "msg:2", "b")
+    run("SET", "likes:1", "0")
+    assert scan("msg:") == [
+        {"key": "msg:1", "value": "a", "ttl": -1},
+        {"key": "msg:2", "value": "b", "ttl": -1},
+    ]
+
+
+def test_scp02_no_match_is_empty_list(clock):
+    run("SET", "likes:1", "0")
+    assert run("SCANPREFIX", "msg:") == []
+
+
+def test_scp03_empty_prefix_returns_every_key(clock):
+    run("SET", "a", "1")
+    run("SET", "b", "2")
+    assert [item["key"] for item in scan("")] == ["a", "b"]
+
+
+def test_scp04_ttl_is_remaining_seconds_rounded_up(clock):
+    run("SET", "msg:1", "a", "1800")
+    clock.now = 18.2
+    assert scan("msg:") == [{"key": "msg:1", "value": "a", "ttl": 1782}]
+
+
+def test_scp05_expired_key_is_excluded_and_cleaned(clock):
+    run("SET", "msg:1", "a", "10")
+    run("SET", "msg:2", "b", "100")
+    clock.now = 10
+    assert [item["key"] for item in scan("msg:")] == ["msg:2"]
+    assert info()["size"] == 1                   # 만료 key를 TOMBSTONE으로 정리해요
+    assert info()["tombstones"] == 1
+
+
+def test_scp06_expired_key_with_other_prefix_is_cleaned_too(clock):
+    run("SET", "likes:1", "0", "10")
+    clock.now = 10
+    assert run("SCANPREFIX", "msg:") == []
+    assert info()["size"] == 0
+
+
+def test_scp07_prefix_is_case_sensitive(clock):
+    run("SET", "MSG:1", "a")
+    assert run("SCANPREFIX", "msg:") == []
+
+
+def test_scp08_sees_keys_after_resize(clock):
+    for k in range(1, 21):                       # 8칸에서 시작해 여러 번 커져요
+        run("SET", f"msg:{k}", f"v{k}")
+    assert len(run("SCANPREFIX", "msg:")) == 20
+
+
+@pytest.mark.parametrize("args", [[], ["msg:", "x"]])
+def test_scp09_wrong_arg_count(clock, args):
+    assert_error(dispatcher.execute("SCANPREFIX", args), 400, "WRONG_ARGS")
+
+
+def test_scp10_non_string_prefix(clock):
+    assert_error(dispatcher.execute("SCANPREFIX", [123]), 400, "WRONG_TYPE")
+
+
+def test_scp11_prefix_too_long(clock):
+    assert_error(dispatcher.execute("SCANPREFIX", ["k" * 100]), 400, "KEY_TOO_LONG")
+
+
+def test_scp12_command_name_is_case_insensitive(clock):
+    run("SET", "msg:1", "a")
+    assert len(run("scanprefix", "msg:")) == 1

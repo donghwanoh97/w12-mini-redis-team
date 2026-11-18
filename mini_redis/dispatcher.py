@@ -95,6 +95,10 @@ def cmd_decr(args):
     return ok_response(store.incr_by(args[0], -1))
 
 
+def cmd_scanprefix(args):
+    return ok_response(store.scan_prefix(args[0]))    # [{"key", "value", "ttl"}, ...]
+
+
 def cmd_mset(args):
     store.mset(list(zip(args[0::2], args[1::2])))
     return ok_response("OK")
@@ -131,6 +135,7 @@ COMMANDS = {
     "MSET":   Command(cmd_mset, 2, MAX_BATCH * 2, PAIRS),
     "MGET":   Command(cmd_mget, 1, MAX_BATCH, ALL),
     "TTL":    Command(cmd_ttl, 1, 1, FIRST),
+    "SCANPREFIX": Command(cmd_scanprefix, 1, 1, FIRST),   # prefix도 key처럼 99byte 검사를 받아요
 }
 
 
